@@ -18,4 +18,5 @@ MAX_LEN_OF_MESSAGE = 200
 MAX_MESSAGES_IN_HISTORY = 2
 
 voices = {'Мужской': 'filipp', 'Женский': 'jane'}
-modes = ['Пообщаться', 'Порисовать']
+modes = ['Пообщаться', 'Порисовать', 'Поговорить']
+tables = ['questions', 'images', 'speechkit']

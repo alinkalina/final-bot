@@ -1,7 +1,7 @@
 import sqlite3
 import logging
 
-from limits import MAX_USERS, MAX_TOKENS_FOR_USER, voices, modes, MAX_MESSAGES_IN_HISTORY, SECONDS_IN_BLOCK
+from limits import MAX_USERS, MAX_TOKENS_FOR_USER, voices, modes, MAX_MESSAGES_IN_HISTORY, SECONDS_IN_BLOCK, tables
 
 
 def table():
@@ -49,6 +49,16 @@ def create_tables():
         stt_blocks INTEGER DEFAULT 0,
         image TEXT DEFAULT "",
         style TEXT DEFAULT "",
+        FOREIGN KEY (author_id) REFERENCES users (id)
+    );
+    ''')
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS speechkit(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        author_id INTEGER NOT NULL,
+        tts_symbols INTEGER DEFAULT 0,
+        stt_blocks INTEGER DEFAULT 0,
         FOREIGN KEY (author_id) REFERENCES users (id)
     );
     ''')
@@ -107,19 +117,19 @@ def get_id_by_chat_id(user_id):
 # start (both)
 
 
-def start_request(user_id, mode, text):
+def start_request(user_id, text='', mode=modes[0]):
     if mode == modes[0]:
-        change_db(f'INSERT INTO questions (author_id, text) '
-                  f'VALUES ({get_id_by_chat_id(user_id)}, "{text}");')
+        change_db(f'INSERT INTO questions (author_id, text) VALUES ({get_id_by_chat_id(user_id)}, "{text}");')
     elif mode == modes[1]:
-        change_db(f'INSERT INTO images (author_id, prompt) '
-                  f'VALUES ({get_id_by_chat_id(user_id)}, "{text}");')
+        change_db(f'INSERT INTO images (author_id, prompt) VALUES ({get_id_by_chat_id(user_id)}, "{text}");')
+    elif mode == modes[2]:
+        change_db(f'INSERT INTO speechkit (author_id) VALUES ({get_id_by_chat_id(user_id)});')
 
 
 # add answer (both)
 
 
-def set_answer(user_id, mode, answer, param=''):
+def set_answer(user_id, answer, mode=modes[0], param=''):
     if mode == modes[0]:
         change_db(f'UPDATE questions SET answer = "{answer}" '
                   f'WHERE id = (SELECT MAX(id) FROM questions WHERE author_id = {get_id_by_chat_id(user_id)});')
@@ -140,16 +150,23 @@ def set_tokens(user_id, tokens):
 # speechkit stt, tts (can be both)
 
 
-def set_speechkit_expenses(user_id, stt_seconds, tts_symbols):
-    stt_blocks = stt_seconds // SECONDS_IN_BLOCK + 1
-    change_db(f'UPDATE questions SET stt_blocks = {stt_blocks}, tts_symbols = {tts_symbols} '
-              f'WHERE id = (SELECT MAX(id) FROM questions WHERE author_id = {get_id_by_chat_id(user_id)});')
+# def set_speechkit_expenses(user_id, stt_seconds, tts_symbols):
+#     stt_blocks = stt_seconds // SECONDS_IN_BLOCK + 1
+#     change_db(f'UPDATE questions SET stt_blocks = {stt_blocks}, tts_symbols = {tts_symbols} '
+#               f'WHERE id = (SELECT MAX(id) FROM questions WHERE author_id = {get_id_by_chat_id(user_id)});')
 
 
-def set_stt_expenses(user_id, stt_seconds):
+def set_tts_expenses(user_id, tts_symbols, mode=modes[0]):
+    table_name = tables[modes.index(mode)]
+    change_db(f'UPDATE {table_name} SET tts_symbols = {tts_symbols} '
+              f'WHERE id = (SELECT MAX(id) FROM {table_name} WHERE author_id = {get_id_by_chat_id(user_id)});')
+
+
+def set_stt_expenses(user_id, stt_seconds, mode=modes[0]):
     stt_blocks = stt_seconds // SECONDS_IN_BLOCK + 1
-    change_db(f'UPDATE images SET stt_blocks = {stt_blocks} '
-              f'WHERE id = (SELECT MAX(id) FROM images WHERE author_id = {get_id_by_chat_id(user_id)});')
+    table_name = tables[modes.index(mode)]
+    change_db(f'UPDATE {table_name} SET stt_blocks = {stt_blocks} '
+              f'WHERE id = (SELECT MAX(id) FROM {table_name} WHERE author_id = {get_id_by_chat_id(user_id)});')
 
 
 # history for gpt
@@ -178,15 +195,12 @@ def count_user_images(user_id):
 # can user send voice or not (can be both)
 
 
-def count_speechkit_blocks(user_id, mode=modes[0]):
-    table_name = 'questions'
-    if mode == modes[1]:
-        table_name = 'images'
+def count_speechkit_blocks(user_id, table_name):
     return get_from_db(f'SELECT SUM(stt_blocks) FROM {table_name} WHERE author_id = {get_id_by_chat_id(user_id)};')
 
 
-def count_speechkit_symbols(user_id):
-    return get_from_db(f'SELECT SUM(tts_symbols) FROM questions WHERE author_id = {get_id_by_chat_id(user_id)};')
+def count_speechkit_symbols(user_id, table_name):
+    return get_from_db(f'SELECT SUM(tts_symbols) FROM {table_name} WHERE author_id = {get_id_by_chat_id(user_id)};')
 
 
 # change voice in settings

@@ -2,7 +2,7 @@ import requests
 import logging
 
 from database import get_history, set_answer, set_tokens
-from limits import MAX_GPT_TOKENS, modes
+from limits import MAX_GPT_TOKENS
 from config import IAM_TOKEN, FOLDER_ID
 from limitation import count_tokens
 
@@ -49,5 +49,5 @@ def ask_gpt(user_id, question):
         set_tokens(user_id, count_tokens(answer))
     else:
         answer = 'Произошла ошибка в Yandex GPT'
-    set_answer(user_id, modes[0], answer)
+    set_answer(user_id, answer)
     return answer

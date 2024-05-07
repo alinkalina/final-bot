@@ -68,13 +68,11 @@ def draw_image(user_id, prompt):
     uuid, style = generate_image(prompt, headers)
     print(style)
     code = check_generation(uuid, headers)
-    print(code)
-    set_answer(user_id, modes[1], code, style)
+    set_answer(user_id, code, modes[1], style)
     if code:
         image = base64.b64decode(code)
         with open('test.jpg', 'wb') as f:
             f.write(image)
         f.close()
-        print()
         return image, style
     return False, ''
