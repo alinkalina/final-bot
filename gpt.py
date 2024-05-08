@@ -48,6 +48,6 @@ def ask_gpt(user_id, question):
     if answer:
         set_tokens(user_id, count_tokens(answer))
     else:
-        answer = 'Произошла ошибка в Yandex GPT'
+        answer = 'В YandexGPT произошла ошибка. Попробуй снова чуть позже'
     set_answer(user_id, answer)
     return answer
