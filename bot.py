@@ -2,11 +2,11 @@ import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from config import BOT_TOKEN
 import logging
-from database import add_user, start_request, get_all_user_texts, get_voice, table, set_tts_expenses, set_stt_expenses
+from database import add_user, start_request, get_all_user_texts, get_voice, table, set_tts_expenses, set_stt_expenses, set_voice
 from speechkit import text_to_speech, speech_to_text
 from gpt import ask_gpt
-from limits import modes, MAX_SYMBOLS_FOR_USER, MAX_BLOCKS_IN_MESSAGE, SECONDS_IN_BLOCK, MAX_LEN_OF_MESSAGE
-from limitation import check_gpt_limit, check_tts_limits, check_stt_limits, check_kandinsky_limits
+from limits import modes, MAX_SYMBOLS_FOR_USER, MAX_BLOCKS_IN_MESSAGE, SECONDS_IN_BLOCK, MAX_LEN_OF_MESSAGE, voices
+from limitation import check_gpt_limit, check_tts_limits, check_stt_limits, check_kandinsky_limits, get_user_balance
 from kandinsky import draw_image
 
 
@@ -197,6 +197,34 @@ def stt(audio):
                              reply_markup=ReplyKeyboardRemove())
 
 
+@bot.message_handler(commands=['balance'])
+def send_balance(message):
+    if add_user(message.chat.id, message.from_user.username):
+        gpt_tokens, images, symbols, blocks = get_user_balance(message.chat.id)
+        bot.send_message(message.chat.id, f'{gpt_tokens[0]} {gpt_tokens[1]},'
+                                          f'{images[0]} {images[1]},'
+                                          f'{symbols[0]} {symbols[1]},'
+                                          f'{blocks[0]} {blocks[1]},',
+                         reply_markup=create_markup(modes))
+    else:
+        bot.send_message(message.chat.id, 'Извини, но на данный момент все свободные места для пользователей заняты :( '
+                                          'Попробуй снова через некоторое время', reply_markup=ReplyKeyboardRemove())
+        logging.warning('Достигнут лимит пользователей бота')
+
+
+@bot.message_handler(commands=['settings'])
+def change_settings(message):
+    if add_user(message.chat.id, message.from_user.username):
+        # gpt_tokens, images, symbols, blocks = get_user_balance(message.chat.id)
+        current_voice = get_voice(message.chat.id)
+        bot.send_message(message.chat.id, f'now - {current_voice}. change voice',
+                         reply_markup=create_markup(list(voices.keys())))
+    else:
+        bot.send_message(message.chat.id, 'Извини, но на данный момент все свободные места для пользователей заняты :( '
+                                          'Попробуй снова через некоторое время', reply_markup=ReplyKeyboardRemove())
+        logging.warning('Достигнут лимит пользователей бота')
+
+
 @bot.message_handler(content_types=['text'])
 def text_message(message):
     if message.text in modes:
@@ -215,7 +243,7 @@ def text_message(message):
         elif message.text == modes[2]:
             tts_limit = check_tts_limits(message.chat.id)
             stt_limit = check_stt_limits(message.chat.id)
-            if tts_limit and stt_limit:
+            if tts_limit or stt_limit:
                 available_modes = []
                 if tts_limit:
                     available_modes.append('/tts')
@@ -224,6 +252,8 @@ def text_message(message):
                 bot.send_message(message.chat.id, 'choose mode', reply_markup=create_markup(available_modes))
             else:
                 bot.send_message(message.chat.id, 'no tts and stt', reply_markup=create_markup(modes))
+    elif message.text in voices.keys():
+        set_voice(message.chat.id, voices.get(message.text))
     else:
         bot.send_message(message.chat.id,
                          'Тебе следует воспользоваться командой или кнопкой, другого бот не понимает :(',
