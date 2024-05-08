@@ -1,12 +1,12 @@
 import requests
-from config import X_KEY, X_SECRET
 import json
 import time
 import base64
-from database import set_answer
-from limits import modes
 import random
 import logging
+from database import set_answer
+from constants import modes
+from config import X_KEY, X_SECRET
 
 
 def get_model(headers):
@@ -50,9 +50,7 @@ def check_generation(request_id, headers):
         response = requests.get('https://api-key.fusionbrain.ai/key/api/v1/text2image/status/' + request_id,
                                 headers=headers)
         data = response.json()
-        print(data)
         if data['status'] == 'DONE':
-            print('done')
             return data['images'][0]
         attempts -= 1
         time.sleep(delay)
@@ -61,19 +59,14 @@ def check_generation(request_id, headers):
 
 
 def draw_image(user_id, prompt):
-    print('start')
     headers = {
         'X-Key': f'Key {X_KEY}',
         'X-Secret': f'Secret {X_SECRET}',
     }
     uuid, style = generate_image(prompt, headers)
-    print(style)
     code = check_generation(uuid, headers)
     set_answer(user_id, code, modes[1], style)
     if code:
         image = base64.b64decode(code)
-        with open('test.jpg', 'wb') as f:
-            f.write(image)
-        f.close()
         return image, style
     return False, ''

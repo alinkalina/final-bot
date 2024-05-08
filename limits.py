@@ -2,7 +2,7 @@ MAX_USERS = 6
 
 MAX_TOKENS = 30000
 MAX_TOKENS_FOR_USER = MAX_TOKENS // MAX_USERS
-MAX_GPT_TOKENS = 50
+MAX_GPT_TOKENS = 200
 
 MAX_IMAGES_FOR_USER = 15
 
@@ -16,7 +16,3 @@ MAX_SYMBOLS_FOR_USER = MAX_SYMBOLS // MAX_USERS
 
 MAX_LEN_OF_MESSAGE = 200
 MAX_MESSAGES_IN_HISTORY = 2
-
-voices = {'Мужской': 'filipp', 'Женский': 'jane'}
-modes = ['Пообщаться', 'Порисовать', 'Поговорить']
-tables = ['questions', 'images', 'speechkit']

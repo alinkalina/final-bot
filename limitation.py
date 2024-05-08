@@ -1,7 +1,9 @@
-from database import count_gpt_tokens, count_speechkit_blocks, count_speechkit_symbols, count_user_images
-from limits import MAX_SYMBOLS_FOR_USER, MAX_TOKENS_FOR_USER, MAX_GPT_TOKENS, MAX_BLOCKS_FOR_USER, MAX_IMAGES_FOR_USER, tables
-from config import IAM_TOKEN, FOLDER_ID
 import requests
+
+from database import count_gpt_tokens, count_user_images, count_speechkit_symbols, count_speechkit_blocks
+from limits import MAX_TOKENS_FOR_USER, MAX_IMAGES_FOR_USER, MAX_SYMBOLS_FOR_USER, MAX_BLOCKS_FOR_USER, MAX_GPT_TOKENS
+from constants import tables
+from config import IAM_TOKEN, FOLDER_ID
 
 
 def count_tokens(text):
@@ -37,19 +39,6 @@ def all_gpt_tokens(user_id):
 def check_gpt_limit(user_id):
     tokens = all_gpt_tokens(user_id)
     return MAX_TOKENS_FOR_USER - tokens >= MAX_GPT_TOKENS
-
-
-# def check_speechkit_limits(user_id):
-#     try:
-#         blocks = count_speechkit_blocks(user_id)[0][0]
-#         symbols = count_speechkit_symbols(user_id)[0][0]
-#         if not blocks:
-#             blocks = 0
-#         if not symbols:
-#             symbols = 0
-#     except IndexError:
-#         blocks, symbols = 0, 0
-#     return (blocks < MAX_BLOCKS_FOR_USER) and (MAX_SYMBOLS_FOR_USER - symbols >= MAX_GPT_TOKENS)
 
 
 def all_user_images(user_id):
@@ -99,14 +88,3 @@ def get_user_balance(user_id):
         (symbols, MAX_SYMBOLS_FOR_USER),
         (blocks, MAX_BLOCKS_FOR_USER)
     ]
-
-
-# def available_blocks(user_id):
-#     blocks = count_stt_request(user_id)
-#
-#
-# def available_symbols(user_id):
-#     symbols = check_tts_limits(user_id)[1]
-#     if MAX_SYMBOLS_FOR_USER - symbols >= MAX_SYMBOLS_IN_MESSAGE:
-#         return MAX_SYMBOLS_IN_MESSAGE
-#     return MAX_SYMBOLS_FOR_USER - symbols

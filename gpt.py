@@ -2,9 +2,9 @@ import requests
 import logging
 
 from database import get_history, set_answer, set_tokens
+from limitation import count_tokens
 from limits import MAX_GPT_TOKENS
 from config import IAM_TOKEN, FOLDER_ID
-from limitation import count_tokens
 
 
 def post_request(messages):
@@ -43,7 +43,6 @@ def ask_gpt(user_id, question):
         messages.append({'role': 'user', 'text': i[0]})
         messages.append({'role': 'assistant', 'text': i[1]})
     messages.append({'role': 'user', 'text': question})
-    print(messages)
     answer = post_request(messages)
     if answer:
         set_tokens(user_id, count_tokens(answer))

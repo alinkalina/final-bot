@@ -1,13 +1,15 @@
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
-from config import BOT_TOKEN
 import logging
-from database import add_user, start_request, get_all_user_texts, get_voice, table, set_tts_expenses, set_stt_expenses, set_voice
-from speechkit import text_to_speech, speech_to_text
+
+from database import add_user, start_request, set_tts_expenses, set_stt_expenses, set_voice, get_voice
 from gpt import ask_gpt
-from limits import modes, MAX_BLOCKS_IN_MESSAGE, SECONDS_IN_BLOCK, MAX_LEN_OF_MESSAGE, voices
-from limitation import check_gpt_limit, check_tts_limits, check_stt_limits, check_kandinsky_limits, get_user_balance
 from kandinsky import draw_image
+from speechkit import text_to_speech, speech_to_text
+from limitation import check_gpt_limit, check_kandinsky_limits, check_tts_limits, check_stt_limits, get_user_balance
+from limits import MAX_BLOCKS_IN_MESSAGE, SECONDS_IN_BLOCK, MAX_LEN_OF_MESSAGE
+from constants import modes, voices
+from config import BOT_TOKEN
 
 
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -33,7 +35,6 @@ def send_start_message(message):
                                           ' меня нарисовать что-нибудь... И ещё несколько прикольных вещей! Только '
                                           'сначала прочитай инструкцию по использованию бота - жми /help',
                          reply_markup=ReplyKeyboardRemove())
-        print(table())
     else:
         bot.send_message(message.chat.id, 'Извини, но на данный момент все свободные места для пользователей заняты :( '
                                           'Попробуй снова через некоторое время', reply_markup=ReplyKeyboardRemove())
@@ -62,7 +63,6 @@ def send_help_message(message):
                                           'перестанут работать (но тебя об этом я конечно же предупрежу!). Свой '
                                           'баланс и ограничения можно посмотреть по команде /balance.',
                          reply_markup=ReplyKeyboardRemove(), parse_mode='Markdown')
-        print(get_all_user_texts(message.chat.id))
     else:
         bot.send_message(message.chat.id, 'Извини, но на данный момент все свободные места для пользователей заняты :( '
                                           'Попробуй снова через некоторое время', reply_markup=ReplyKeyboardRemove())
@@ -80,7 +80,8 @@ def ask(message):
 
 
 def chat(message):
-    if check_gpt_limit(message.chat.id) and ((message.content_type == 'text' and not message.text.startswith('/')) or message.content_type == 'voice'):
+    if check_gpt_limit(message.chat.id) and ((message.content_type == 'text' and not message.text.startswith('/')) or
+                                             message.content_type == 'voice'):
         text = ''
         if message.content_type == 'voice':
             if check_tts_limits(message.chat.id) and check_stt_limits(message.chat.id):
@@ -126,7 +127,9 @@ def chat(message):
 
 
 def draw(message):
-    if check_kandinsky_limits(message.chat.id) and ((message.content_type == 'text' and not message.text.startswith('/')) or message.content_type == 'voice'):
+    if check_kandinsky_limits(message.chat.id) and ((message.content_type == 'text' and
+                                                     not message.text.startswith('/')) or
+                                                    message.content_type == 'voice'):
         prompt = ''
         if message.content_type == 'voice':
             if check_stt_limits(message.chat.id):
@@ -178,8 +181,6 @@ def tts_command(message):
         msg = bot.send_message(message.chat.id, f'Напиши текст не более {MAX_LEN_OF_MESSAGE} символов',
                                reply_markup=ReplyKeyboardRemove())
         bot.register_next_step_handler(msg, tts)
-        # start_tts_text(message.chat.id)
-        # bot.send_message(message.chat.id, 'Выбери голос', reply_markup=create_markup(list(voices.keys())))
     else:
         bot.send_message(message.chat.id, 'К сожалению, у тебя закончились все символы для синтеза речи',
                          reply_markup=ReplyKeyboardRemove())
@@ -192,7 +193,6 @@ def tts(text):
                                                  f'Отправь что-нибудь покороче :)', reply_markup=ReplyKeyboardRemove())
             bot.register_next_step_handler(msg, tts)
         else:
-            # set_text(text.chat.id, text.text)
             response = text_to_speech(text.text, get_voice(text.chat.id))
             if response:
                 set_tts_expenses(text.chat.id, len(text.text), modes[2])
@@ -227,11 +227,11 @@ def stt_command(message):
 def stt(audio):
     if check_stt_limits(audio.chat.id) and audio.content_type == 'voice':
         if audio.voice.duration > MAX_BLOCKS_IN_MESSAGE * SECONDS_IN_BLOCK:
-            msg = bot.send_message(audio.chat.id, f'Это аудио длиннее {MAX_BLOCKS_IN_MESSAGE * SECONDS_IN_BLOCK} секунд. '
-                                                  f'Отправь что-нибудь покороче :)', reply_markup=ReplyKeyboardRemove())
+            msg = bot.send_message(audio.chat.id, f'Это аудио длиннее {MAX_BLOCKS_IN_MESSAGE * SECONDS_IN_BLOCK} '
+                                                  f'секунд. Отправь что-нибудь покороче :)',
+                                   reply_markup=ReplyKeyboardRemove())
             bot.register_next_step_handler(msg, stt)
         else:
-            # set_blocks(audio.chat.id, audio.voice.duration)
             file_info = bot.get_file(audio.voice.file_id)
             file = bot.download_file(file_info.file_path)
             response = speech_to_text(file)
@@ -270,7 +270,6 @@ def send_balance(message):
 @bot.message_handler(commands=['settings'])
 def change_settings(message):
     if add_user(message.chat.id, message.from_user.username):
-        # gpt_tokens, images, symbols, blocks = get_user_balance(message.chat.id)
         bot.send_message(message.chat.id, 'Выбери голос', reply_markup=create_markup(list(voices.keys())))
     else:
         bot.send_message(message.chat.id, 'Извини, но на данный момент все свободные места для пользователей заняты :( '
