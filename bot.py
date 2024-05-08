@@ -271,8 +271,19 @@ def send_balance(message):
 def change_settings(message):
     if add_user(message.chat.id, message.from_user.username):
         # gpt_tokens, images, symbols, blocks = get_user_balance(message.chat.id)
-        bot.send_message(message.chat.id, 'Выбери голос',
-                         reply_markup=create_markup(list(voices.keys())))
+        bot.send_message(message.chat.id, 'Выбери голос', reply_markup=create_markup(list(voices.keys())))
+    else:
+        bot.send_message(message.chat.id, 'Извини, но на данный момент все свободные места для пользователей заняты :( '
+                                          'Попробуй снова через некоторое время', reply_markup=ReplyKeyboardRemove())
+        logging.warning('Достигнут лимит пользователей бота')
+
+
+@bot.message_handler(commands=['debug'])
+def send_logs(message):
+    if add_user(message.chat.id, message.from_user.username):
+        with open('logs.txt', 'r') as f:
+            bot.send_document(message.chat.id, f, reply_markup=ReplyKeyboardRemove())
+        f.close()
     else:
         bot.send_message(message.chat.id, 'Извини, но на данный момент все свободные места для пользователей заняты :( '
                                           'Попробуй снова через некоторое время', reply_markup=ReplyKeyboardRemove())
