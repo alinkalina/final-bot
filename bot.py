@@ -129,39 +129,6 @@ def draw(message):
         bot.send_message(message.chat.id, 'only text or voice', reply_markup=create_markup(modes))
 
 
-@bot.message_handler(content_types=['text'])
-def text_message(message):
-    if message.text in modes:
-        if message.text == modes[0]:
-            if check_gpt_limit(message.chat.id):
-                msg = bot.send_message(message.chat.id, 'print question', reply_markup=ReplyKeyboardRemove())
-                bot.register_next_step_handler(msg, chat)
-            else:
-                bot.send_message(message.chat.id, 'you can only draw', reply_markup=create_markup(modes))
-        elif message.text == modes[1]:
-            if check_kandinsky_limits(message.chat.id):
-                msg = bot.send_message(message.chat.id, 'print prompt', reply_markup=ReplyKeyboardRemove())
-                bot.register_next_step_handler(msg, draw)
-            else:
-                bot.send_message(message.chat.id, 'you can only chat', reply_markup=create_markup(modes))
-        elif message.text == modes[2]:
-            tts_limit = check_tts_limits(message.chat.id)
-            stt_limit = check_stt_limits(message.chat.id)
-            if tts_limit and stt_limit:
-                available_modes = []
-                if tts_limit:
-                    available_modes.append('/tts')
-                if stt_limit:
-                    available_modes.append('/stt')
-                bot.send_message(message.chat.id, 'choose mode', reply_markup=create_markup(available_modes))
-            else:
-                bot.send_message(message.chat.id, 'no tts and stt', reply_markup=create_markup(modes))
-    else:
-        bot.send_message(message.chat.id,
-                         'Тебе следует воспользоваться командой или кнопкой, другого бот не понимает :(',
-                         reply_markup=ReplyKeyboardRemove())
-
-
 @bot.message_handler(commands=['tts'])
 def tts_command(message):
     if check_tts_limits(message.chat.id):
@@ -180,7 +147,7 @@ def tts(text):
     if text.content_type != 'text':
         msg = bot.send_message(text.chat.id, 'Нужно отправить текстовое сообщение!', reply_markup=ReplyKeyboardRemove())
         bot.register_next_step_handler(msg, tts)
-    elif len(text.text) > 0:
+    elif len(text.text) > MAX_LEN_OF_MESSAGE:
         msg = bot.send_message(text.chat.id, f'В этом сообщении больше {MAX_LEN_OF_MESSAGE} символов. '
                                              f'Отправь что-нибудь покороче :)', reply_markup=ReplyKeyboardRemove())
         bot.register_next_step_handler(msg, tts)
@@ -228,6 +195,39 @@ def stt(audio):
         else:
             bot.send_message(audio.chat.id, 'В SpeechKit произошла ошибка. Попробуй снова чуть позже',
                              reply_markup=ReplyKeyboardRemove())
+
+
+@bot.message_handler(content_types=['text'])
+def text_message(message):
+    if message.text in modes:
+        if message.text == modes[0]:
+            if check_gpt_limit(message.chat.id):
+                msg = bot.send_message(message.chat.id, 'print question', reply_markup=ReplyKeyboardRemove())
+                bot.register_next_step_handler(msg, chat)
+            else:
+                bot.send_message(message.chat.id, 'you can only draw', reply_markup=create_markup(modes))
+        elif message.text == modes[1]:
+            if check_kandinsky_limits(message.chat.id):
+                msg = bot.send_message(message.chat.id, 'print prompt', reply_markup=ReplyKeyboardRemove())
+                bot.register_next_step_handler(msg, draw)
+            else:
+                bot.send_message(message.chat.id, 'you can only chat', reply_markup=create_markup(modes))
+        elif message.text == modes[2]:
+            tts_limit = check_tts_limits(message.chat.id)
+            stt_limit = check_stt_limits(message.chat.id)
+            if tts_limit and stt_limit:
+                available_modes = []
+                if tts_limit:
+                    available_modes.append('/tts')
+                if stt_limit:
+                    available_modes.append('/stt')
+                bot.send_message(message.chat.id, 'choose mode', reply_markup=create_markup(available_modes))
+            else:
+                bot.send_message(message.chat.id, 'no tts and stt', reply_markup=create_markup(modes))
+    else:
+        bot.send_message(message.chat.id,
+                         'Тебе следует воспользоваться командой или кнопкой, другого бот не понимает :(',
+                         reply_markup=ReplyKeyboardRemove())
 
 
 logging.info('starting')

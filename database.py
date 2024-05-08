@@ -196,11 +196,17 @@ def count_user_images(user_id):
 
 
 def count_speechkit_blocks(user_id, table_name):
-    return get_from_db(f'SELECT SUM(stt_blocks) FROM {table_name} WHERE author_id = {get_id_by_chat_id(user_id)};')
+    try:
+        return get_from_db(f'SELECT SUM(stt_blocks) FROM {table_name} WHERE author_id = {get_id_by_chat_id(user_id)};')
+    except sqlite3.OperationalError:
+        return [(None,)]
 
 
 def count_speechkit_symbols(user_id, table_name):
-    return get_from_db(f'SELECT SUM(tts_symbols) FROM {table_name} WHERE author_id = {get_id_by_chat_id(user_id)};')
+    try:
+        return get_from_db(f'SELECT SUM(tts_symbols) FROM {table_name} WHERE author_id = {get_id_by_chat_id(user_id)};')
+    except sqlite3.OperationalError:
+        return [(None,)]
 
 
 # change voice in settings
