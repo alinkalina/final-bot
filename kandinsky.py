@@ -6,6 +6,7 @@ import base64
 from database import set_answer
 from limits import modes
 import random
+import logging
 
 
 def get_model(headers):
@@ -55,7 +56,7 @@ def check_generation(request_id, headers):
             return data['images'][0]
         attempts -= 1
         time.sleep(delay)
-    print('fail')
+    logging.error('Слишком долгая генерация в Kandinsky')
     return ''
 
 

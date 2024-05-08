@@ -11,7 +11,6 @@ from kandinsky import draw_image
 
 
 bot = telebot.TeleBot(BOT_TOKEN)
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     filename='logs.txt', filemode='w')
 
@@ -62,7 +61,7 @@ def send_help_message(message):
                                           'секунд на перевод из речи в текст. Когда лимит будет превышен, мои функции '
                                           'перестанут работать (но тебя об этом я конечно же предупрежу!). Свой '
                                           'баланс и ограничения можно посмотреть по команде /balance.',
-                         reply_markup=ReplyKeyboardRemove())
+                         reply_markup=ReplyKeyboardRemove(), parse_mode='Markdown')
         print(get_all_user_texts(message.chat.id))
     else:
         bot.send_message(message.chat.id, 'Извини, но на данный момент все свободные места для пользователей заняты :( '
@@ -118,10 +117,12 @@ def chat(message):
     elif not check_gpt_limit(message.chat.id):
         bot.send_message(message.chat.id, 'К сожалению, у тебя закончились все токены для общения с нейросетью',
                          reply_markup=create_markup(modes))
-    else:
+    elif not message.text.startswith('/'):
         msg = bot.send_message(message.chat.id, 'Нужно отправить текстовое или голосовое сообщение!',
                                reply_markup=ReplyKeyboardRemove())
         bot.register_next_step_handler(msg, chat)
+    else:
+        bot.send_message(message.chat.id, 'Пожалуйста, повтори команду', reply_markup=ReplyKeyboardRemove())
 
 
 def draw(message):
@@ -162,10 +163,12 @@ def draw(message):
     elif not check_kandinsky_limits(message.chat.id):
         bot.send_message(message.chat.id, 'К сожалению, у тебя закончились все изображения для генерации',
                          reply_markup=create_markup(modes))
-    else:
+    elif not message.text.startswith('/'):
         msg = bot.send_message(message.chat.id, 'Нужно отправить текстовое или голосовое сообщение!',
                                reply_markup=ReplyKeyboardRemove())
         bot.register_next_step_handler(msg, draw)
+    else:
+        bot.send_message(message.chat.id, 'Пожалуйста, повтори команду', reply_markup=ReplyKeyboardRemove())
 
 
 @bot.message_handler(commands=['tts'])
@@ -183,7 +186,7 @@ def tts_command(message):
 
 
 def tts(text):
-    if check_tts_limits(text.chat.id) and text.content_type == 'text':
+    if check_tts_limits(text.chat.id) and text.content_type == 'text' and not text.text.startswith('/'):
         if len(text.text) > MAX_LEN_OF_MESSAGE:
             msg = bot.send_message(text.chat.id, f'В этом сообщении больше {MAX_LEN_OF_MESSAGE} символов. '
                                                  f'Отправь что-нибудь покороче :)', reply_markup=ReplyKeyboardRemove())
@@ -201,9 +204,11 @@ def tts(text):
     elif not check_tts_limits(text.chat.id):
         bot.send_message(text.chat.id, 'К сожалению, у тебя закончились все символы для синтеза речи',
                          reply_markup=ReplyKeyboardRemove())
-    else:
+    elif not text.text.startswith('/'):
         msg = bot.send_message(text.chat.id, 'Нужно отправить текстовое сообщение!', reply_markup=ReplyKeyboardRemove())
         bot.register_next_step_handler(msg, tts)
+    else:
+        bot.send_message(text.chat.id, 'Пожалуйста, повтори команду', reply_markup=ReplyKeyboardRemove())
 
 
 @bot.message_handler(commands=['stt'])
@@ -251,10 +256,10 @@ def send_balance(message):
     if add_user(message.chat.id, message.from_user.username):
         gpt_tokens, images, symbols, blocks = get_user_balance(message.chat.id)
         bot.send_message(message.chat.id, f'Потрачено:'
-                                          f'{gpt_tokens[0]} из {gpt_tokens[1]} токенов'
-                                          f'{images[0]} из {images[1]} изображений'
-                                          f'{symbols[0]} из {symbols[1]} символов'
-                                          f'{blocks[0]} из {blocks[1]} блоков',
+                                          f'\n{gpt_tokens[0]} из {gpt_tokens[1]} токенов'
+                                          f'\n{images[0]} из {images[1]} изображений'
+                                          f'\n{symbols[0]} из {symbols[1]} символов'
+                                          f'\n{blocks[0]} из {blocks[1]} блоков',
                          reply_markup=ReplyKeyboardRemove())
     else:
         bot.send_message(message.chat.id, 'Извини, но на данный момент все свободные места для пользователей заняты :( '
@@ -266,8 +271,7 @@ def send_balance(message):
 def change_settings(message):
     if add_user(message.chat.id, message.from_user.username):
         # gpt_tokens, images, symbols, blocks = get_user_balance(message.chat.id)
-        current_voice = get_voice(message.chat.id)
-        bot.send_message(message.chat.id, f'Сейчас голос - {current_voice}. Но ты можешь поменять его',
+        bot.send_message(message.chat.id, 'Выбери голос',
                          reply_markup=create_markup(list(voices.keys())))
     else:
         bot.send_message(message.chat.id, 'Извини, но на данный момент все свободные места для пользователей заняты :( '
@@ -320,5 +324,8 @@ def error_message(message):
                      reply_markup=ReplyKeyboardRemove())
 
 
-logging.info('starting')
-bot.polling()
+try:
+    logging.info('Бот запущен')
+    bot.polling()
+except Exception as e:
+    logging.critical(f'Ошибка - {e}')

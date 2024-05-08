@@ -1,5 +1,6 @@
 import requests
 from config import IAM_TOKEN, FOLDER_ID
+import logging
 
 
 def text_to_speech(text, voice):
@@ -39,4 +40,5 @@ def speech_to_text(audio):
 
     if answer.get('error_code') is None:
         return answer.get('result')
+    logging.error(f"Ошибка Speechkit - {answer.get('error_code')}")
     return False
