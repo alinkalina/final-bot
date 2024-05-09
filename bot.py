@@ -52,7 +52,9 @@ def send_help_message(message):
                                           '\nПоговорить - выбирай режим (текст в голос - /tts, голос в текст - /stt), '
                                           'а нейросеть выполнит преобразование.'
                                           '\nВсе режимы работают в формате диалога (не нужно заново запускать команду, '
-                                          'просто продолжай спрашивать). Кстати, тебе не обязательно печатать текст! '
+                                          'просто продолжай спрашивать), _но если захочешь поменять режим командой, '
+                                          'будь готов, что придётся повторять её 2 раза, я могу не успеть '
+                                          'переключиться..._ . Кстати, тебе не обязательно печатать текст! '
                                           'Во всех 3 режимах ты можешь отправлять мне голосовые. Тогда ответ '
                                           '(если это возможно) тоже придёт тебе голосом. В настройках (/settings) '
                                           'ты можешь выбрать голос.'
@@ -155,6 +157,8 @@ def draw(message):
         else:
             prompt = message.text
         start_request(message.chat.id, text=prompt, mode=modes[1])
+        bot.send_message(message.chat.id, 'Генерация началась, она займёт около минуты...',
+                         reply_markup=ReplyKeyboardRemove())
         image, style = draw_image(message.chat.id, prompt)
         if image:
             msg = bot.send_photo(message.chat.id, image, f'Изображение в стиле {style}',
@@ -245,6 +249,8 @@ def stt(audio):
     elif not check_stt_limits(audio.chat.id):
         bot.send_message(audio.chat.id, 'К сожалению, у тебя закончились все блоки для распознавания речи',
                          reply_markup=ReplyKeyboardRemove())
+    elif audio.content_type == 'text' and audio.text.startswith('/'):
+        bot.send_message(audio.chat.id, 'Пожалуйста, повтори команду', reply_markup=ReplyKeyboardRemove())
     else:
         msg = bot.send_message(audio.chat.id, 'Нужно отправить голосовое сообщение!',
                                reply_markup=ReplyKeyboardRemove())
@@ -255,12 +261,12 @@ def stt(audio):
 def send_balance(message):
     if add_user(message.chat.id, message.from_user.username):
         gpt_tokens, images, symbols, blocks = get_user_balance(message.chat.id)
-        bot.send_message(message.chat.id, f'Потрачено:'
+        bot.send_message(message.chat.id, f'*Потрачено:*'
                                           f'\n{gpt_tokens[0]} из {gpt_tokens[1]} токенов'
                                           f'\n{images[0]} из {images[1]} изображений'
                                           f'\n{symbols[0]} из {symbols[1]} символов'
                                           f'\n{blocks[0]} из {blocks[1]} блоков',
-                         reply_markup=ReplyKeyboardRemove())
+                         reply_markup=ReplyKeyboardRemove(), parse_mode='Markdown')
     else:
         bot.send_message(message.chat.id, 'Извини, но на данный момент все свободные места для пользователей заняты :( '
                                           'Попробуй снова через некоторое время', reply_markup=ReplyKeyboardRemove())
@@ -322,6 +328,7 @@ def text_message(message):
                                                   'блоки для распознавания речи', reply_markup=create_markup(modes))
     elif message.text in voices.keys():
         set_voice(message.chat.id, voices.get(message.text))
+        bot.send_message(message.chat.id, 'Голос обновлён', reply_markup=ReplyKeyboardRemove())
     else:
         bot.send_message(message.chat.id,
                          'Тебе следует воспользоваться командой или кнопкой, другого бот не понимает :(',
